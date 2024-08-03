@@ -32,6 +32,29 @@ const client = new MongoClient(uri, {
     }
 });
 
+const verifyToken = async(req, res, next)=>{
+    const token = req.cookies?.token;
+    console.log('value of token', token);
+    if(!token){
+        return res.status(401).send({message:'not authorized'})
+    }
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+        // error
+        if(err){
+            console.log(err);
+            return res.status(401).send({message:'unauthorized'})
+        }
+
+        // if token is not valid then it would be decoded
+        console.log('value in the token', decoded);
+        // user infov diye dicchi sathe
+        req.user = decoded;
+        next();
+    })
+   
+}
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -48,7 +71,6 @@ async function run() {
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '5h'})
             
             // store in cokies
-
             res
             .cookie('token', token, {
                 httpOnly: true,
@@ -81,9 +103,10 @@ async function run() {
 
 
         // bookings 
-        app.get('/bookings', async (req, res) => {
+        app.get('/bookings', verifyToken, async (req, res) => {
             console.log(req.query.email);
             console.log('token taken', req.cookies.token);
+            console.log('user in the valid token',req.user);
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
