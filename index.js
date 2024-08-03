@@ -3,14 +3,21 @@ const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 // jwt token
 const jwt = require('jsonwebtoken');
+// cookies k backend e anar jnno cookie parser use hoy
+const cookieParser = require('cookie-parser');
 require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(cors({
+    // server side theke send korar jnno
+    origin: ['http://localhost:5173'], //local host tai
+    credentials: true
+}));
 app.use(express.json());
-
+// call cookieParser
+app.use(cookieParser());
 
 // console.log(process.env.DB_PASS)
 
@@ -38,8 +45,18 @@ async function run() {
             const user = req.body;
             console.log(user);
             // generate token
-            const token = jwt.sign(user, 'secret', {expiresIn: '5h'});
-            res.send(token);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '5h'})
+            
+            // store in cokies
+
+            res
+            .cookie('token', token, {
+                httpOnly: true,
+                secure: false,
+                 // server and client same jaygay na. tai none dea
+
+            })
+            .send({success: true})
         })
 
 
@@ -66,6 +83,7 @@ async function run() {
         // bookings 
         app.get('/bookings', async (req, res) => {
             console.log(req.query.email);
+            console.log('token taken', req.cookies.token);
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
